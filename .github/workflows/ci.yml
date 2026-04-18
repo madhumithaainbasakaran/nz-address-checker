@@ -1,0 +1,50 @@
+name: CI
+
+# Trigger on push and pull requests to main branch
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Check out code
+      - uses: actions/checkout@v4
+      
+      # Set up Node.js 20
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      # Install backend dependencies
+      - name: Install backend dependencies
+        run: cd backend && npm install
+      
+      # Run API unit/integration tests with Jest
+      - name: Run API tests
+        run: cd backend && npm test
+      
+      # Install root dependencies (Playwright)
+      - name: Install root dependencies
+        run: npm install
+
+      # Install Playwright browsers (chromium)
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+      
+      # Start backend server in background and wait for it to be ready
+      - name: Start backend server
+        run: cd backend && npm start &
+      
+      - name: Wait for server to start
+        run: sleep 3
+      
+      # Run E2E tests in headless mode
+      - name: Run E2E tests
+        run: npx playwright test e2e/smoke.spec.js --config e2e/playwright.config.js
+        env:
+          CI: true

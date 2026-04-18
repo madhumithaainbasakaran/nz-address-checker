@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NZ Address Checker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top navigation bar */
+    nav {
+      background: #2563eb;
+      color: white;
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    nav .brand {
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    nav button {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    nav button:hover { background: rgba(255,255,255,0.3); }
+
+    /* Main content */
+    main {
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      font-size: 20px;
+      color: #111;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: #6b7280;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px 40px 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #111;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+
+    /* Spinner inside input */
+    .spinner {
+      display: none;
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      border: 2px solid #e5e7eb;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+    /* Results list */
+    .results {
+      margin-top: 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .result-item {
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #111;
+      border-bottom: 1px solid #f3f4f6;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .result-item:last-child { border-bottom: none; }
+    .result-item:hover { background: #f0f4f8; }
+
+    .result-item .suburb {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+
+    /* Status messages */
+    .message {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .message.error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+    }
+
+    .message.info {
+      background: #f0f4f8;
+      border: 1px solid #e5e7eb;
+      color: #6b7280;
+    }
+
+    /* Selected address */
+    .selected {
+      display: none;
+      margin-top: 16px;
+      padding: 14px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+    }
+
+    .selected p {
+      font-size: 13px;
+      color: #166534;
+      font-weight: 500;
+    }
+
+    .selected span {
+      font-size: 14px;
+      color: #15803d;
+      font-weight: 600;
+    }
+
+    /* Mock badge */
+    .mock-badge {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 4px 10px;
+      background: #fef9c3;
+      border: 1px solid #fde68a;
+      border-radius: 20px;
+      font-size: 12px;
+      color: #92400e;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <span class="brand">🗺️ NZ Address Checker</span>
+    <button id="logout-btn">Sign out</button>
+  </nav>
+
+  <!-- Main -->
+  <main>
+    <div class="card">
+      <h1>Find a New Zealand Address</h1>
+      <p class="subtitle">Start typing to search — results appear in real time</p>
+
+      <label for="address-input">Search address</label>
+      <div class="input-wrapper">
+        <input
+          type="text"
+          id="address-input"
+          data-testid="address-input"
+          placeholder="e.g. 1 Queen Street, Auckland"
+          autocomplete="off"
+        />
+        <div class="spinner" id="spinner"></div>
+      </div>
+
+      <!-- Status messages -->
+      <div class="message error" id="error-message" role="alert" data-testid="error-message"></div>
+      <div class="message info" id="info-message" data-testid="info-message"></div>
+
+      <!-- Results -->
+      <div class="results" id="results-list" data-testid="results-list"></div>
+
+      <!-- Selected address confirmation -->
+      <div class="selected" id="selected-address">
+        <p>✅ Selected address</p>
+        <span id="selected-text"></span>
+      </div>
+
+      <!-- Mock data notice -->
+      <div class="mock-badge" id="mock-badge" style="display:none">
+        ⚠️ Running with mock data — add NZ Post API key for live results
+      </div>
+    </div>
+  </main>
+
+  <script src="js/checker.js"></script>
+</body>
+</html>

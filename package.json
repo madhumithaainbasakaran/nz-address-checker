@@ -1,0 +1,11 @@
+{
+  "name": "nz-address-checker",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node backend/server.js",
+    "test:e2e": "npx playwright test e2e/smoke.spec.js --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}
