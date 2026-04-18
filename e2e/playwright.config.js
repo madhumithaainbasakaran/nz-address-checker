@@ -29,7 +29,7 @@ module.exports = defineConfig({
     baseURL: 'http://localhost:3001',
 
     // Show browser window during tests (not headless)
-    headless: false,
+    headless: !!process.env.CI,
 
     // Collect traces on first retry for debugging
     trace: 'on-first-retry',
