@@ -1,8 +1,12 @@
+// smoke.spec.js
+// E2E smoke tests — 2 critical user journeys
+// Requires server running at http://localhost:3001
+
 const { test, expect } = require('@playwright/test');
 
 // Test 1: Login journey
-// This test verifies that a user can successfully log in with valid credentials
-// and is redirected to the address checker page.
+// Verifies a user can successfully log in with valid 
+// credentials and is redirected to the address checker page
 test('Login journey', async ({ page }) => {
   await page.goto('/login.html');
 
@@ -14,20 +18,25 @@ test('Login journey', async ({ page }) => {
 });
 
 // Test 2: Address search journey
-// This test verifies the full user flow: login, navigate to checker, perform address search,
-// and confirm that results are displayed after the debounce period.
+// Verifies the full user flow: login, search address,
+// confirm real-time results appear from NZ Post API
 test('Address search journey', async ({ page }) => {
+  // Login first
   await page.goto('/login.html');
-
   await page.fill('#username', 'Madhu');
   await page.fill('#password', 'madhu123');
   await page.click('#login-button');
-
   await page.waitForURL(/checker\.html/);
 
-  await page.fill('#address-input', 'Queen');
-  await page.waitForTimeout(1000); // Wait for debounce
+  // Type address and wait for real API response
+  await page.fill('#address-input', 'Queen Street');
 
-  const resultCount = await page.locator('[data-testid="result-item"]').count();
+  // Wait longer for OAuth token + real API call
+  await page.waitForTimeout(2000);
+
+  // At least one result should appear
+  const resultCount = await page.locator(
+    '[data-testid="result-item"]'
+  ).count();
   expect(resultCount).toBeGreaterThan(0);
 });

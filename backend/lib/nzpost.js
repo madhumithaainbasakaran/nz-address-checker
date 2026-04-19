@@ -1,8 +1,7 @@
 // lib/nzpost.js
-// NZ Post Address Checker API client
-// Real endpoint: https://api.nzpost.co.nz/addresschecker/1.0/suggest
-// API key requested from NZ Post — using mock data until key is received
-// To activate real API: replace NZ_POST_API_KEY in .env
+// NZ Post AddressChecker API client
+// Uses OAuth2 Client Credentials to get access token
+// Then calls the suggest endpoint for real-time address search
 
 const MOCK_ADDRESSES = [
   {
@@ -68,28 +67,56 @@ function getMockResults(query) {
   return { suggestions, source: 'mock' };
 }
 
-// Main function — calls real NZ Post API or falls back to mock
+// Step 1 — Get OAuth2 access token from NZ Post
+async function getAccessToken() {
+  const clientId = process.env.NZ_POST_API_KEY;
+  const clientSecret = process.env.NZ_POST_CLIENT_SECRET;
+
+  const response = await fetch(
+    'https://oauth.nzpost.co.nz/as/token.oauth2',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`
+    }
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error('Failed to get NZ Post access token');
+  }
+
+  const data = await response.json();
+  console.log('✅ Got access token');
+  return data.access_token;
+}
+
+// Step 2 — Call NZ Post AddressChecker API
 async function checkAddress(query) {
   const apiKey = process.env.NZ_POST_API_KEY;
   const apiUrl = process.env.NZ_POST_API_URL;
 
   // Use mock data if no real API key configured
   if (!apiKey || apiKey === 'your_key_here') {
-    console.log('ℹ️  No API key found — using mock data');
+    console.log('ℹ️  No API key — using mock data');
     return getMockResults(query);
   }
 
-  // --- Real NZ Post API call ---
   const url = `${apiUrl}?q=${encodeURIComponent(query)}&max=8`;
 
-  // Timeout after 8 seconds so slow API doesn't hang our app
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
 
   try {
+    // Get OAuth2 token first
+    const accessToken = await getAccessToken();
+
+    // Call address API with token
     const response = await fetch(url, {
       headers: {
-        'client_id': apiKey,      // NZ Post uses client_id as the auth header
+        'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
       },
       signal: controller.signal
@@ -98,6 +125,7 @@ async function checkAddress(query) {
     clearTimeout(timeout);
 
     if (!response.ok) {
+      const body = await response.text();
       throw new Error(`NZ Post API error: ${response.status}`);
     }
 

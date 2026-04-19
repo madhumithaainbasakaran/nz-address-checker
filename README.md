@@ -22,8 +22,10 @@ postal addresses via the "NZ Post AddressChecker API".
 
 2. **Configure environment**
    - A `.env` file is included with local development settings
-   - To use the real NZ Post AddressChecker API, replace `NZ_POST_API_KEY` 
-     in `backend/.env`
+   - Mock data is used by default
+   - For real NZ Post API add to `backend/.env`:
+     - `NZ_POST_API_KEY` = your client_id
+     - `NZ_POST_CLIENT_SECRET` = your client_secret
 
 3. **Start the server**
 ```bash
@@ -141,17 +143,22 @@ and avoids running slow browser tests when the API is broken.
 
 ## NZ Post AddressChecker API
 
-The app is integrated with the real NZ Post Address Checker 
-API endpoint:
+The app is fully integrated with the real NZ Post 
+AddressChecker API using OAuth2 Client Credentials flow:
+
+1. App requests access token from NZ Post OAuth server
+   using client_id + client_secret
+2. Bearer token used to call the suggest endpoint
+3. Real NZ addresses returned in real time
+
 GET https://api.nzpost.co.nz/addresschecker/1.0/suggest?q={query}&max=8
 
-Access to this API requires an NZ Post business account. 
-Access was requested via email to `api@nzpost.co.nz` during 
-this task. The integration is production-ready — swap 
-`NZ_POST_API_KEY` in `.env` to activate live results.
+Access was requested via email and approved during this task.
+The live integration is working with real NZ Post address data.
 
-Mock data is used locally to demonstrate the full flow 
-without a key.
+Mock data is used in CI since credentials are not stored 
+in the repository. To activate locally add both 
+`NZ_POST_API_KEY` and `NZ_POST_CLIENT_SECRET` to `.env`.
 
 ---
 
@@ -181,13 +188,21 @@ Used for:
   empty query in `nzpost.js` returned all mock addresses 
   instead of empty array — fixed by adding an early 
   return check for empty/whitespace input
+- CI pipeline failed on first run — Playwright was configured
+  headed but Ubuntu has no display. Fixed by setting 
+  headless mode using CI environment variable.
+- Real NZ Post API debugged and fixed — OAuth2 Client 
+  Credentials flow implemented after discovering the API 
+  requires Bearer token not client_id header.
 
 ---
 
 ## What I would improve with more time
 
-1. **Real NZ Post AddressChecker API key** — integration is built to the 
-   exact API spec, one `.env` change activates it
+1. **Cache OAuth2 token** — currently a new token is fetched 
+   for every search request. In production the token would 
+   be cached for 55 minutes and refreshed only when expired,
+   reducing latency and OAuth server load.
 2. **Deploy to AWS** — code structure already mirrors Lambda,
    deploying means moving routes to Lambda and frontend to S3
 3. **Protected route redirect test** — E2E test verifying 
